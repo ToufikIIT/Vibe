@@ -1,19 +1,34 @@
 import { inngest } from "./client";
 import { gemini, createAgent } from "@inngest/agent-kit";
+import { Sandbox } from "@e2b/code-interpreter";
+import { getSandbox } from "./utils";
 
 export const helloWorld = inngest.createFunction(
   { id: "hello-world" },
   { event: "test/hello.world" },
-  async ({ event }) => {
-    const writer = createAgent({
-      name: "writer",
-      system:
-        "You are an expert writer.  You write readable, concise, simple content.",
-      model: gemini({ model: "gemini-2.5-pro" , apiKey: process.env.GEMINI_KEY! }),
+  async ({ event, step }) => {
+    const sandboxId = await step.run("get-sandbox-id", async () => {
+      const sandbox = await Sandbox.create("vibe-nextjs-test-toufik-06");
+      return sandbox.sandboxId;
     });
-    const { output } = await writer.run(
-      `Write about the following topic in 100 words: ${event.data.value}`
+    const codeAgent = createAgent({
+      name: "code-agent",
+      system:
+        "You are an expert next-js developer.  You write readable, maintaibable code.You write simple Next.js & React code snippets to solve problems.",
+      model: gemini({
+        model: "gemini-2.5-pro",
+        apiKey: process.env.GEMINI_KEY!,
+      }),
+    });
+    const { output } = await codeAgent.run(
+      `Write the following snippet: ${event.data.value}`
     );
-    return { output };
+
+    const sandboxUrl = await step.run("get-sandbox-url", async () => {
+      const sandbox = await getSandbox(sandboxId);
+      const host=  sandbox.getHost(3000);
+      return `http://${host}`;
+    })
+    return { output , sandboxUrl};
   }
 );
