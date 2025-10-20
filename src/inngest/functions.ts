@@ -23,7 +23,7 @@ export const helloWorld = inngest.createFunction(
       description: "An expert coding agent",
       system: PROMPT,
       model: gemini({
-        model: "gemini-2.5-pro",
+        model: "gemini-2.5-flash-lite",
         apiKey: process.env.GEMINI_KEY!,
       }),
       tools: [
