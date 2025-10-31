@@ -9,6 +9,7 @@ import { Sandbox } from "@e2b/code-interpreter";
 import { getSandbox, lastAssistantTextMessageContent } from "./utils";
 import z from "zod";
 import { PROMPT } from "@/prompt";
+import { prisma } from "@/lib/db";
 
 export const helloWorld = inngest.createFunction(
   { id: "hello-world" },
@@ -145,11 +146,25 @@ export const helloWorld = inngest.createFunction(
       const host = sandbox.getHost(3000);
       return `http://${host}`;
     });
+
+    await step.run("save-result",async () =>{
+      return await prisma.message.create({
+        data: {
+          content: result.state.data.summary,
+          role: "ASSISTANT",
+          type: "RESULT",
+        }
+      })
+    })
+
     return {
       url: sandboxUrl,
       title: "Fragment",
       files: result.state.data.files,
       summary: result.state.data.summary,
+      fragment:{
+        
+      }
     };
   }
 );
