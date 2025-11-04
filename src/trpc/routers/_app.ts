@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { baseProcedure, createTRPCRouter } from '../init';
 import { inngest } from '@/inngest/client';
 import { messageRouter } from '@/modules/messages/servers/procedures';
+import { projectsRouter } from '@/modules/projects/servers/procedures';
 export const appRouter = createTRPCRouter({
 
   messages: messageRouter,
+  projects: projectsRouter,
   /* invoke: baseProcedure
   .input(
     z.object({
