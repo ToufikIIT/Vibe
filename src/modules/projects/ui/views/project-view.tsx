@@ -60,7 +60,7 @@ const ProjectView = ({ projectId }: Props) => {
                   <CodeIcon /> <span>Code</span>
                 </TabsTrigger>
               </TabsList>
-              <div className="ml=auto flex items-center gap-x-2">
+              <div className="ml-auto flex items-center gap-x-2">
                 <Button asChild size="sm" variant="default">
                   <Link href="/pricing">
                     <CrownIcon /> Upgrade
