@@ -14,7 +14,7 @@ import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { err } from "inngest/types";
 import { useRouter } from "next/navigation";
-import { PROJECT_TEMPLATES } from "./constants";
+import { PROJECT_TEMPLATES } from "../constants";
 
 const formSchema = z.object({
   value: z
