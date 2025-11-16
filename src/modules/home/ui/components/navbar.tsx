@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import UserControl from "@/components/user-control"
 import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton } from "@clerk/nextjs"
 import Image from "next/image"
 import Link from "next/link"
@@ -28,7 +29,7 @@ const Navbar = () => {
                 </div>
             </SignedOut>
             <SignedIn>
-                
+                <UserControl showName/>
             </SignedIn>
         </div>
     </nav>
