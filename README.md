@@ -48,49 +48,54 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the repository
 
 git clone https://github.com/ToufikIIT/Vibe.git
-cd vibe### 2. Install dependencies
+cd vibe
+### 2. Install dependencies
 
 npm install
-# or
+ or
 yarn install
-# or
-pnpm install### 3. Set up environment variables
+ or
+pnpm install
+### 3. Set up environment variables
 
 Create a `.env` file in the root directory and add the following variables:
 
-# Database
+- Database
 DATABASE_URL="postgresql://user:password@localhost:5432/vibe?schema=public"
 
-# Clerk Authentication
+- Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 CLERK_SECRET_KEY=your_clerk_secret_key
 
-# Inngest
+- Inngest
 INNGEST_EVENT_KEY=your_inngest_event_key
 INNGEST_SIGNING_KEY=your_inngest_signing_key
 
-# Google Gemini AI
+- Google Gemini AI
 GEMINI_KEY=your_gemini_api_key
 
-# E2B (optional, if using custom sandbox template)
+- E2B (optional, if using custom sandbox template)
 E2B_API_KEY=your_e2b_api_key
 
-# Next.js
-NEXT_PUBLIC_APP_URL=http://localhost:3000### 4. Set up the database
+- Next.js
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Generate Prisma Client
+### 4. Set up the database
+
+- Generate Prisma Client
 npx prisma generate
 
-# Run migrations
+- Run migrations
 npx prisma migrate dev
 
-# (Optional) Seed the database
-# npx prisma db seed### 5. Run the development server
+- (Optional) Seed the database
+   npx prisma db seed
+### 5. Run the development server
 sh
 npm run dev
-# or
+ or
 yarn dev
-# or
+ or
 pnpm devOpen [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
 ### 6. Set up Inngest (for production)
