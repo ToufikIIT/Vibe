@@ -26,15 +26,19 @@ const MessagesContainer = ({ projectId , activeFragment, setActiveFragment}: Pro
   );
    useEffect(() => {
     const lastAssistantMessage = messages.findLast(
-      (message) => message.role === 'ASSISTANT'
+      (message) => message.role === 'ASSISTANT' && message.fragment
     );
-    if(
-      lastAssistantMessage?.fragment && lastAssistantMessage.id !== lastAssistantMessageIdRef.current
-    ){
-      setActiveFragment(lastAssistantMessage.fragment);
-      lastAssistantMessageIdRef.current = lastAssistantMessage.id;
+    if(lastAssistantMessage?.fragment) {
+      // Set active fragment if it's a new message or if no fragment is currently active
+      const isNewMessage = lastAssistantMessage.id !== lastAssistantMessageIdRef.current;
+      const shouldSetActive = isNewMessage || !activeFragment;
+      
+      if(shouldSetActive && lastAssistantMessage.fragment.sandboxUrl) {
+        setActiveFragment(lastAssistantMessage.fragment);
+        lastAssistantMessageIdRef.current = lastAssistantMessage.id;
+      }
     }
-  }, [messages,setActiveFragment]);
+  }, [messages, setActiveFragment, activeFragment]);
  
   useEffect(() => {
     bottomRef.current?.scrollIntoView();
