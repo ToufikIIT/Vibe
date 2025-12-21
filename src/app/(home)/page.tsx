@@ -4,6 +4,11 @@ import ProjectForm from '@/modules/home/ui/components/project-form'
 import ProjectsList from '@/modules/home/ui/components/projects-list';
 import Image from 'next/image'
 import React from 'react'
+import { TypewriterEffectSmooth } from "@/components/ui/typewriter-effect";
+
+const words = [
+  { text: "Create"},{text: "Apps"} , {text: "and"} ,{text: "Website"} ,{text: "by"} ,{text: "chatting"} ,{text: "with"} ,{text: "AI" },
+];
 
 const page = () => {
   return (
@@ -21,9 +26,10 @@ const page = () => {
         <h1 className='text-2xl md:text-5xl font-bold text-center'>
           Build something with Vibe
         </h1>
-        <p className='text-lg md:text-xl text-muted-foreground text-center'>
+        <TypewriterEffectSmooth words={words} cursorClassName='text-lg md:text-xl text-muted-foreground text-center' />
+        {/* <p className='text-lg md:text-xl text-muted-foreground text-center'>
           Create Apps and Websites by chatting with AI.
-        </p>
+        </p> */}
         <div className='max-w-3xl mx-auto w-full'>
           <ProjectForm />
         </div>
