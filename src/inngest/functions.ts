@@ -27,7 +27,7 @@ export const codeAgentFunction = inngest.createFunction(
   async ({ event, step }) => {
     const sandboxId = await step.run("get-sandbox-id", async () => {
       const sandbox = await Sandbox.create("vibe-nextjs-test-toufik-06");
-      await sandbox.setTimeout(60_000 * 10 *3);
+      await sandbox.setTimeout(60_000 * 10 * 3);
       return sandbox.sandboxId;
     });
 
@@ -45,6 +45,7 @@ export const codeAgentFunction = inngest.createFunction(
           },
           take: 5,
         });
+
         for (const message of messages) {
           formattedMessages.push({
             type: "text",
@@ -52,6 +53,7 @@ export const codeAgentFunction = inngest.createFunction(
             content: message.content,
           });
         }
+
         return formattedMessages.reverse();
       }
     );
@@ -81,29 +83,28 @@ export const codeAgentFunction = inngest.createFunction(
           parameters: z.object({
             command: z.string(),
           }),
-          handler: async ({ command }, { step }) => {
-            return await step?.run("terminal", async () => {
-              const buffers = { stdout: "", stderr: "" };
-              try {
-                const sandbox = await getSandbox(sandboxId);
-                const result = await sandbox.commands.run(command, {
-                  onStdout: (data: string) => {
-                    buffers.stdout += data;
-                  },
-                  onStderr: (data: string) => {
-                    buffers.stderr += data;
-                  },
-                });
-                return result.stdout;
-              } catch (e) {
-                console.error(
-                  `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`
-                );
-                return `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
-              }
-            });
+          handler: async ({ command }) => {
+            const buffers = { stdout: "", stderr: "" };
+            try {
+              const sandbox = await getSandbox(sandboxId);
+              const result = await sandbox.commands.run(command, {
+                onStdout: (data: string) => {
+                  buffers.stdout += data;
+                },
+                onStderr: (data: string) => {
+                  buffers.stderr += data;
+                },
+              });
+              return result.stdout;
+            } catch (e) {
+              console.error(
+                `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`
+              );
+              return `Command failed: ${e} \nstdout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
+            }
           },
         }),
+
         createTool({
           name: "createOrUpdateFiles",
           description: "Create or update files in the sandbox",
@@ -117,49 +118,40 @@ export const codeAgentFunction = inngest.createFunction(
           }),
           handler: async (
             { files },
-            { step, network }: Tool.Options<AgentState>
+            { network }: Tool.Options<AgentState>
           ) => {
-            const newFiles = await step?.run(
-              "createOrUpdateFiles",
-              async () => {
-                try {
-                  const updatedFiles = network.state.data.files || {};
-                  const sandbox = await getSandbox(sandboxId);
-                  for (const file of files) {
-                    await sandbox.files.write(file.path, file.content);
-                    updatedFiles[file.path] = file.content;
-                  }
-                  return updatedFiles;
-                } catch (e) {
-                  return "Error: " + e;
-                }
+            try {
+              const updatedFiles = network.state.data.files || {};
+              const sandbox = await getSandbox(sandboxId);
+              for (const file of files) {
+                await sandbox.files.write(file.path, file.content);
+                updatedFiles[file.path] = file.content;
               }
-            );
-            if (typeof newFiles === "object") {
-              network.state.data.files = newFiles;
+              network.state.data.files = updatedFiles;
+            } catch (e) {
+              return "Error: " + e;
             }
           },
         }),
+
         createTool({
           name: "readFiles",
           description: "Read files from the sandbox",
           parameters: z.object({
             files: z.array(z.string()),
           }),
-          handler: async ({ files }, { step }) => {
-            return await step?.run("readFiles", async () => {
-              try {
-                const sandbox = await getSandbox(sandboxId);
-                const contents = [];
-                for (const file of files) {
-                  const content = await sandbox.files.read(file);
-                  contents.push({ path: file, content });
-                }
-                return JSON.stringify(contents);
-              } catch (e) {
-                return "Error: " + e;
+          handler: async ({ files }) => {
+            try {
+              const sandbox = await getSandbox(sandboxId);
+              const contents = [];
+              for (const file of files) {
+                const content = await sandbox.files.read(file);
+                contents.push({ path: file, content });
               }
-            });
+              return JSON.stringify(contents);
+            } catch (e) {
+              return "Error: " + e;
+            }
           },
         }),
       ],
@@ -194,7 +186,7 @@ export const codeAgentFunction = inngest.createFunction(
 
     const fragmentTitleGenerator = createAgent({
       name: "fragment-title-generator",
-      description: "A fragment title genrator",
+      description: "A fragment title generator",
       system: FRAGMENT_TITLE_PROMPT,
       model: gemini({
         model: "gemini-2.5-flash-lite",
@@ -204,7 +196,7 @@ export const codeAgentFunction = inngest.createFunction(
 
     const responseGenerator = createAgent({
       name: "response-generator",
-      description: "A response genrator",
+      description: "A response generator",
       system: RESPONSE_PROMPT,
       model: gemini({
         model: "gemini-2.5-flash-lite",
@@ -221,9 +213,8 @@ export const codeAgentFunction = inngest.createFunction(
 
     const generateFragmentTitle = () => {
       if (fragmentTitleOutput[0].type !== "text") {
-        return "Fargment";
+        return "Fragment";
       }
-
       if (Array.isArray(fragmentTitleOutput[0].content)) {
         return fragmentTitleOutput[0].content.map((txt) => txt).join("");
       } else {
@@ -235,7 +226,6 @@ export const codeAgentFunction = inngest.createFunction(
       if (responseOutput[0].type !== "text") {
         return "here you go";
       }
-
       if (Array.isArray(responseOutput[0].content)) {
         return responseOutput[0].content.map((txt) => txt).join("");
       } else {
@@ -246,12 +236,11 @@ export const codeAgentFunction = inngest.createFunction(
     const isError =
       !result.state.data.summary ||
       Object.keys(result.state.data.files || {}).length === 0;
+
     const sandboxUrl = await step.run("get-sandbox-url", async () => {
       const sandbox = await getSandbox(sandboxId);
       const host = sandbox.getHost(3000);
-      // Use HTTPS for production environments to avoid mixed content issues
-      // E2B sandboxes support both HTTP and HTTPS
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
       return `${protocol}://${host}`;
     });
 
@@ -260,7 +249,7 @@ export const codeAgentFunction = inngest.createFunction(
         return await prisma.message.create({
           data: {
             projectId: event.data.projectId,
-            content: "Something went wrong.Please try again",
+            content: "Something went wrong. Please try again",
             role: "ASSISTANT",
             type: "ERROR",
           },
