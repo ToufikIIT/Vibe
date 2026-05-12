@@ -81,8 +81,16 @@ export const codeAgentFunction = inngest.createFunction(
           parameters: z.object({
             command: z.string(),
           }),
-          handler: async ({ command }, { step }) => {
-            return await step?.run("terminal", async () => {
+          handler: async ({ command }, opts?: Tool.Options<AgentState>) => {
+            const step = opts?.step;
+            const runWithStep = async <T>(
+              name: string,
+              fn: () => Promise<T>
+            ) => {
+              if (step) return step.run(name, fn);
+              return fn();
+            };
+            return await runWithStep("terminal", async () => {
               const buffers = { stdout: "", stderr: "" };
               try {
                 const sandbox = await getSandbox(sandboxId);
@@ -117,25 +125,31 @@ export const codeAgentFunction = inngest.createFunction(
           }),
           handler: async (
             { files },
-            { step, network }: Tool.Options<AgentState>
+            opts?: Tool.Options<AgentState>
           ) => {
-            const newFiles = await step?.run(
-              "createOrUpdateFiles",
-              async () => {
-                try {
-                  const updatedFiles = network.state.data.files || {};
-                  const sandbox = await getSandbox(sandboxId);
-                  for (const file of files) {
-                    await sandbox.files.write(file.path, file.content);
-                    updatedFiles[file.path] = file.content;
-                  }
-                  return updatedFiles;
-                } catch (e) {
-                  return "Error: " + e;
+            const step = opts?.step;
+            const network = opts?.network;
+            const runWithStep = async <T>(
+              name: string,
+              fn: () => Promise<T>
+            ) => {
+              if (step) return step.run(name, fn);
+              return fn();
+            };
+            const newFiles = await runWithStep("createOrUpdateFiles", async () => {
+              try {
+                const updatedFiles = network?.state.data.files || {};
+                const sandbox = await getSandbox(sandboxId);
+                for (const file of files) {
+                  await sandbox.files.write(file.path, file.content);
+                  updatedFiles[file.path] = file.content;
                 }
+                return updatedFiles;
+              } catch (e) {
+                return "Error: " + e;
               }
-            );
-            if (typeof newFiles === "object") {
+            });
+            if (network && newFiles && typeof newFiles === "object") {
               network.state.data.files = newFiles;
             }
           },
@@ -146,8 +160,16 @@ export const codeAgentFunction = inngest.createFunction(
           parameters: z.object({
             files: z.array(z.string()),
           }),
-          handler: async ({ files }, { step }) => {
-            return await step?.run("readFiles", async () => {
+          handler: async ({ files }, opts?: Tool.Options<AgentState>) => {
+            const step = opts?.step;
+            const runWithStep = async <T>(
+              name: string,
+              fn: () => Promise<T>
+            ) => {
+              if (step) return step.run(name, fn);
+              return fn();
+            };
+            return await runWithStep("readFiles", async () => {
               try {
                 const sandbox = await getSandbox(sandboxId);
                 const contents = [];
