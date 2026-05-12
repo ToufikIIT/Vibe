@@ -24,14 +24,29 @@ interface AgentState {
 export const codeAgentFunction = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
-  async ({ event, step }) => {
-    const sandboxId = await step.run("get-sandbox-id", async () => {
+  async (ctx) => {
+    const event = ctx?.event ?? ctx;
+    const step = ctx?.step;
+    const runWithStep = async <T>(name: string, fn: () => Promise<T>) => {
+      if (step) return step.run(name, fn);
+      return fn();
+    };
+
+    if (!event?.data?.projectId) {
+      throw new Error("Missing Inngest event context");
+    }
+
+    if (!step) {
+      console.warn("Inngest step is missing; running without step context.");
+    }
+
+    const sandboxId = await runWithStep("get-sandbox-id", async () => {
       const sandbox = await Sandbox.create("vibe-nextjs-test-toufik-06");
       await sandbox.setTimeout(60_000 * 10 *3);
       return sandbox.sandboxId;
     });
 
-    const previousMessages = await step.run(
+    const previousMessages = await runWithStep(
       "get-previous-messages",
       async () => {
         const formattedMessages: Message[] = [];
@@ -268,7 +283,7 @@ export const codeAgentFunction = inngest.createFunction(
     const isError =
       !result.state.data.summary ||
       Object.keys(result.state.data.files || {}).length === 0;
-    const sandboxUrl = await step.run("get-sandbox-url", async () => {
+    const sandboxUrl = await runWithStep("get-sandbox-url", async () => {
       const sandbox = await getSandbox(sandboxId);
       const host = sandbox.getHost(3000);
       // Use HTTPS for production environments to avoid mixed content issues
@@ -277,7 +292,7 @@ export const codeAgentFunction = inngest.createFunction(
       return `${protocol}://${host}`;
     });
 
-    await step.run("save-result", async () => {
+    await runWithStep("save-result", async () => {
       if (isError) {
         return await prisma.message.create({
           data: {
