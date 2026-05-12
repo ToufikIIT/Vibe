@@ -10,7 +10,7 @@ import {
 } from "@inngest/agent-kit";
 import { Sandbox } from "@e2b/code-interpreter";
 import { getSandbox, lastAssistantTextMessageContent } from "./utils";
-import z from "zod";
+import { z } from "zod";
 import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT } from "@/prompt";
 import { prisma } from "@/lib/db";
 
@@ -22,16 +22,31 @@ interface AgentState {
 }
 
 export const codeAgentFunction = inngest.createFunction(
-  { id: "code-agent" },
-  { event: "code-agent/run" },
-  async ({ event, step }) => {
-    const sandboxId = await step.run("get-sandbox-id", async () => {
+  // ✅ inngest v4: trigger moves into the options object as `triggers`
+  { id: "code-agent", triggers: { event: "code-agent/run" } },
+  async (ctx) => {
+    const event = ctx?.event ?? ctx;
+    const step = ctx?.step;
+    const runWithStep = async <T>(name: string, fn: () => Promise<T>) => {
+      if (step) return step.run(name, fn);
+      return fn();
+    };
+
+    if (!event?.data?.projectId) {
+      throw new Error("Missing Inngest event context");
+    }
+
+    if (!step) {
+      console.warn("Inngest step is missing; running without step context.");
+    }
+
+    const sandboxId = await runWithStep("get-sandbox-id", async () => {
       const sandbox = await Sandbox.create("vibe-nextjs-test-toufik-06");
       await sandbox.setTimeout(60_000 * 10 * 3);
       return sandbox.sandboxId;
     });
 
-    const previousMessages = await step.run(
+    const previousMessages = await runWithStep(
       "get-previous-messages",
       async () => {
         const formattedMessages: Message[] = [];
@@ -72,6 +87,7 @@ export const codeAgentFunction = inngest.createFunction(
       name: "code-agent",
       description: "An expert coding agent",
       system: PROMPT,
+      // ✅ step passed to model so agent-kit can use step.ai for durable inference
       model: gemini({
         model: "gemini-2.5-flash-lite",
         apiKey: process.env.GEMINI_KEY!,
@@ -116,11 +132,12 @@ export const codeAgentFunction = inngest.createFunction(
               })
             ),
           }),
-          handler: async (
-            { files },
-            { network }: Tool.Options<AgentState>
-          ) => {
+          handler: async ({ files }, opts?: Tool.Options<AgentState>) => {
             try {
+              const network = opts?.network;
+              if (!network) {
+                return "Error: missing network state";
+              }
               const updatedFiles = network.state.data.files || {};
               const sandbox = await getSandbox(sandboxId);
               for (const file of files) {
@@ -184,6 +201,7 @@ export const codeAgentFunction = inngest.createFunction(
 
     const result = await network.run(event.data.value, { state });
 
+    // ✅ step passed to these utility agents too
     const fragmentTitleGenerator = createAgent({
       name: "fragment-title-generator",
       description: "A fragment title generator",
@@ -237,14 +255,14 @@ export const codeAgentFunction = inngest.createFunction(
       !result.state.data.summary ||
       Object.keys(result.state.data.files || {}).length === 0;
 
-    const sandboxUrl = await step.run("get-sandbox-url", async () => {
+    const sandboxUrl = await runWithStep("get-sandbox-url", async () => {
       const sandbox = await getSandbox(sandboxId);
       const host = sandbox.getHost(3000);
       const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
       return `${protocol}://${host}`;
     });
 
-    await step.run("save-result", async () => {
+    await runWithStep("save-result", async () => {
       if (isError) {
         return await prisma.message.create({
           data: {
